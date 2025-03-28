@@ -6,18 +6,22 @@ class InvoiceSalePaymentView(models.Model):
     _auto = False  # Indica que no es una tabla real
     _table_query = """
         SELECT 
-            am.id AS id,  -- Identificador único de la factura
-            am.name AS factura,  -- Número de la factura
-            so.name AS orden_venta,  -- Nombre de la orden de venta
-            am.partner_id AS cliente_id,  -- Cliente relacionado
-            am.amount_total AS total_factura,  -- Total de la factura
-            am.state AS estado_factura,  -- Estado de la factura
-            COALESCE(SUM(ap.amount), 0) AS total_pagado  -- Total pagado, evitando valores NULL
-        FROM account_move am
-        LEFT JOIN sale_order so ON am.invoice_origin = so.name
-        LEFT JOIN account_payment ap ON am.id = ap.reconciled_invoice_id
-        GROUP BY am.id, so.name, am.partner_id, am.amount_total, am.state
-    """
+    am.id AS id,  
+    am.name AS factura,  
+    so.name AS orden_venta,  
+    am.partner_id AS cliente_id,  
+    am.amount_total AS total_factura,  
+    am.state AS estado_factura,  
+    COALESCE(SUM(ap.amount), 0) AS total_pagado  
+FROM account_move am
+LEFT JOIN sale_order so ON am.invoice_origin = so.name
+LEFT JOIN account_move_line aml ON aml.move_id = am.id  
+LEFT JOIN account_partial_reconcile apr ON apr.debit_move_id = aml.id  
+LEFT JOIN account_move_line aml_pago ON aml_pago.id = apr.credit_move_id  
+LEFT JOIN account_payment ap ON ap.id = aml_pago.payment_id  
+WHERE am.state = 'posted'
+GROUP BY am.id, so.name, am.partner_id, am.amount_total, am.state
+"""
 
     # Definimos los campos en Odoo
     factura = fields.Char(string="Factura")
